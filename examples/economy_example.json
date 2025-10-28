@@ -1,0 +1,13 @@
+{
+  "domain": "economy",
+  "sources": [
+    {"source_id": "feed-1", "type": "price", "quality": 0.95}
+  ],
+  "payload": {
+    "news_sentiment": -0.8,
+    "xsec_corr": 0.8,
+    "vol_of_vol": 0.2,
+    "imbalance": -0.6,
+    "spread_bps": 14
+  }
+}
