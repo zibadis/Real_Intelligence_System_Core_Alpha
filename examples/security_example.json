@@ -1,0 +1,13 @@
+{
+  "domain": "security",
+  "sources": [
+    {"source_id": "gw-01", "type": "netflow", "quality": 0.9}
+  ],
+  "payload": {
+    "dst_rep": 0.3,
+    "conn_5s": 95,
+    "err_rate": 0.2,
+    "proc_hash_score": 0.7,
+    "geo_anom": 0.5
+  }
+}
