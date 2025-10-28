@@ -153,6 +153,44 @@ class Telemetry(BaseModel):
 # ----------------------------
 # In‑Memory State (MVP)
 # ----------------------------
+
+
+
+import json, os, logging
+
+CONFIG_DIR = "config"
+
+def load_domain_profiles():
+    profiles = {}
+    for file in os.listdir(CONFIG_DIR):
+        if not file.endswith(".json"):
+            continue
+        path = os.path.join(CONFIG_DIR, file)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                domain = data["domain"]
+                profiles[domain] = DomainProfile(
+                    name=domain,
+                    controls=ControlParams(**data["controls"]),
+                    dhal=DHALWeights(**data["dhal_weights"]),
+                    policy_tier=data["policy_tier"]
+                )
+            logging.info(f"Loaded config for domain: {domain}")
+        except Exception as e:
+            logging.error(f"Error loading {file}: {e}")
+    return profiles
+
+
+
+
+
+
+
+
+# ----------------------------
+# In‑Memory State (MVP)
+# ----------------------------
 class SphereState:
     def __init__(self):
         self.domain_profiles: Dict[Domain, DomainProfile] = DEFAULT_PROFILES.copy()
@@ -180,6 +218,7 @@ class SphereState:
         return f"S{h}"
 
 STATE = SphereState()
+STATE.domain_profiles = load_domain_profiles()
 
 app = FastAPI(title="RIS Minimal Open API (MVP)", version="0.1.0")
 
@@ -418,6 +457,11 @@ def run_cycle(pulse: PulseFrame) -> Dict[str, Any]:
 @app.get("/config")
 async def get_config():
     return {k: v.dict() for k, v in STATE.domain_profiles.items()}
+
+@app.get("/reload_config")
+async def reload_config():
+    STATE.domain_profiles = load_domain_profiles()
+    return {"status": "ok", "domains": list(STATE.domain_profiles.keys())}
 
 @app.post("/pulse")
 async def post_pulse(pulse: PulseFrame):
