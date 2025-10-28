@@ -1,0 +1,13 @@
+{
+  "domain": "health",
+  "sources": [
+    {"source_id": "bed-12", "type": "sensor", "quality": 0.93}
+  ],
+  "payload": {
+    "HR": 120,
+    "RR": 28,
+    "SpO2": 91,
+    "Temp": 37.8,
+    "HRV": 40
+  }
+}
