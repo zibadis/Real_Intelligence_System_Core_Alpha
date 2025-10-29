@@ -469,7 +469,7 @@ async def root():
         "version": "0.1.0",
         "endpoints": ["/docs", "/config", "/telemetry", "/alerts", "/recommendations", "/snapshot", "/pulse"]
     }
-
+ 
 @app.get("/healthz", tags=["system"])
 async def healthz():
     return {"ok": True}
