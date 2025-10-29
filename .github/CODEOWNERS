@@ -1,0 +1,8 @@
+# Default owner for everything
+* @zibadis
+
+# Backend core logic
+app.py @zibadis
+
+# Configuration files
+*.json @zibadis
