@@ -1,0 +1,30 @@
+# Virtual env
+.venv/
+env/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VSCode
+.vscode/
+.history/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs & tmp
+*.log
+*.tmp
+
+# Uvicorn reload artifacts
+*.pid
+*.sock
+
+# Build & dist
+build/
+dist/
+*.egg-info/

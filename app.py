@@ -24,6 +24,7 @@ Notes
 """
 
 from __future__ import annotations
+from pydantic import BaseModel, Field, ConfigDict
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -42,8 +43,11 @@ class ControlParams(BaseModel):
     tau: float        # saliency threshold τ
     kappa: int        # consensus κ
     gamma: float      # update throttle Γ
-    lam: float        # decay λ
+    lambda_: float = Field(alias="lambda")  # ← نام فیلد امن در پایتون + alias برای JSON
     M: int            # max concurrent missions (simplified)
+    # در Pydantic v2:
+
+    model_config = ConfigDict(populate_by_name=True)  # اجازه مقداردهی با نام فیلد همزمان با alias
 
 class DHALWeights(BaseModel):
     I: float
@@ -61,23 +65,24 @@ class DomainProfile(BaseModel):
 DEFAULT_PROFILES: Dict[Domain, DomainProfile] = {
     "security": DomainProfile(
         name="security",
-        controls=ControlParams(tau=0.68, kappa=4, gamma=0.15, lam=0.05, M=8),
+        controls=ControlParams(tau=0.68, kappa=4, gamma=0.15, lambda_=0.05, M=8),
         dhal=DHALWeights(I=0.25, V=0.20, C=0.15, A=0.25, E=0.15),
         policy_tier=2,
     ),
     "economy": DomainProfile(
         name="economy",
-        controls=ControlParams(tau=0.68, kappa=4, gamma=0.18, lam=0.05, M=9),
+        controls=ControlParams(tau=0.68, kappa=4, gamma=0.18, lambda_=0.05, M=9),
         dhal=DHALWeights(I=0.25, V=0.20, C=0.25, A=0.20, E=0.10),
         policy_tier=3,
     ),
     "health": DomainProfile(
         name="health",
-        controls=ControlParams(tau=0.70, kappa=5, gamma=0.14, lam=0.05, M=6),
+        controls=ControlParams(tau=0.70, kappa=5, gamma=0.14, lambda_=0.05, M=6),
         dhal=DHALWeights(I=0.25, V=0.20, C=0.15, A=0.30, E=0.10),
         policy_tier=1,
     ),
 }
+
 
 # ----------------------------
 # Data Contracts (Pydantic)
@@ -172,7 +177,7 @@ def load_domain_profiles():
                 domain = data["domain"]
                 profiles[domain] = DomainProfile(
                     name=domain,
-                    controls=ControlParams(**data["controls"]),
+                    controls = ControlParams.model_validate(data["controls"]),
                     dhal=DHALWeights(**data["dhal_weights"]),
                     policy_tier=data["policy_tier"]
                 )
@@ -357,7 +362,7 @@ def run_cycle(pulse: PulseFrame) -> Dict[str, Any]:
 
     # decay
     for coords in list(STATE.main_paths.keys()):
-        STATE.main_paths[coords] *= (1.0 - profile.controls.lam)
+        STATE.main_paths[coords] *= (1.0 - profile.controls.lambda_)
         if STATE.main_paths[coords] < 1e-3:
             del STATE.main_paths[coords]
 
@@ -367,7 +372,8 @@ def run_cycle(pulse: PulseFrame) -> Dict[str, Any]:
     for t in tickets:
         when = datetime.now(timezone.utc).isoformat()
         sev = "High" if t.saliency > 0.8 else "Medium"
-        why = f"Saliency {t.saliency:.2f} > τ {profile.controls.tau:.2f}; CFV={{{k: round(v,2) for k,v in cfv.items()}}}"
+        cfv_rounded = {k: round(v, 2) for k, v in cfv.items()}
+        why = f"Saliency {t.saliency:.2f} > τ {profile.controls.tau:.2f}; CFV={cfv_rounded}"
         alert = Alert(
             alert_id=str(uuid.uuid4()),
             domain=pulse.domain,
@@ -454,9 +460,23 @@ def run_cycle(pulse: PulseFrame) -> Dict[str, Any]:
 # ----------------------------
 # API Routes
 # ----------------------------
+# — بعد از app = FastAPI(...) این‌ها را بگذار —
+
+@app.get("/", tags=["system"])
+async def root():
+    return {
+        "service": "RIS Core Alpha",
+        "version": "0.1.0",
+        "endpoints": ["/docs", "/config", "/telemetry", "/alerts", "/recommendations", "/snapshot", "/pulse"]
+    }
+ 
+@app.get("/healthz", tags=["system"])
+async def healthz():
+    return {"ok": True}
+
 @app.get("/config")
 async def get_config():
-    return {k: v.dict() for k, v in STATE.domain_profiles.items()}
+    return {k: v.model_dump(by_alias=True) for k, v in STATE.domain_profiles.items()}
 
 @app.get("/reload_config")
 async def reload_config():
